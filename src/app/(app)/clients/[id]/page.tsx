@@ -88,6 +88,8 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
     }
   };
 
+  const showDrive = Boolean(c.driveFolderUrl && features.driveLinks);
+
   return (
     <div className="flex h-full flex-col overflow-y-auto">
       {/* Header */}
@@ -95,8 +97,10 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
         <Link href="/clients" className="mb-3 inline-flex items-center gap-1 text-xs text-fg-3 hover:text-fg">
           <ArrowLeft className="h-3.5 w-3.5" /> All clients
         </Link>
-        <div className="flex flex-wrap items-start gap-4">
-          <button className="group relative" onClick={() => canEdit && logoInput.current?.click()} aria-label="Change logo" disabled={!canEdit}>
+        {/* Phones: logo and details side by side, then the buttons, then the notes, each on its own row.
+            Wider screens: logo | details | buttons, with the notes under the details. */}
+        <div className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-4 gap-y-3 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
+          <button className={`group relative self-start ${c.notes ? 'sm:row-span-2' : ''}`} onClick={() => canEdit && logoInput.current?.click()} aria-label="Change logo" disabled={!canEdit}>
             <Avatar name={c.name} src={c.logoUrl} square size="xl" />
             {canEdit && (
               <span className="absolute inset-0 hidden items-center justify-center rounded-lg bg-black/40 text-white group-hover:flex">
@@ -105,7 +109,7 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
             )}
           </button>
           <input ref={logoInput} type="file" accept="image/*" hidden onChange={(e) => uploadLogo(e.target.files?.[0])} />
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-xl font-semibold">{c.name}</h1>
               <Badge color={CLIENT_STATUS_COLOR[c.status]}>{c.status.toLowerCase()}</Badge>
@@ -131,22 +135,24 @@ export default function ClientPage({ params }: { params: Promise<{ id: string }>
               </span>
               {c.team && <Badge color={c.team.color}>{c.team.name}</Badge>}
             </p>
-            {c.notes && <p className="mt-2 max-w-2xl text-[13px] text-fg-2">{c.notes}</p>}
           </div>
-          <div className="flex gap-2">
-            {c.driveFolderUrl && features.driveLinks && (
-              <a href={c.driveFolderUrl} target="_blank" rel="noopener noreferrer">
-                <Button variant="outline">
+          {(showDrive || canEdit) && (
+          <div className="col-span-2 grid auto-cols-fr grid-flow-col gap-2 sm:col-span-1 sm:col-start-3 sm:row-start-1 sm:flex">
+            {showDrive && (
+              <a href={c.driveFolderUrl ?? undefined} target="_blank" rel="noopener noreferrer" className="flex">
+                <Button variant="outline" className="w-full whitespace-nowrap">
                   <FolderOpen className="h-4 w-4" /> Drive folder
                 </Button>
               </a>
             )}
             {canEdit && (
-              <Button variant="outline" onClick={() => setEdit(true)}>
+              <Button variant="outline" className="whitespace-nowrap" onClick={() => setEdit(true)}>
                 <Pencil className="h-4 w-4" /> Edit
               </Button>
             )}
           </div>
+          )}
+          {c.notes && <p className="col-span-2 max-w-2xl text-[13px] text-fg-2 sm:col-span-1 sm:col-start-2 sm:-mt-1">{c.notes}</p>}
         </div>
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <Stat label="Open conversations" value={c.stats.open} tone={c.stats.open ? 'warning' : undefined} />
