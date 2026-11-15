@@ -11,6 +11,7 @@ import { serializeConversation, serializeMessage } from './serialize';
 import { db, newId, nowIso, touch, type DActivity, type DAttachment, type DContact, type DConversation, type DInbox, type DMessage, type DNotification } from './store';
 import { DRIVE_TITLES } from './content';
 import { driveMetaFor, preview } from './util';
+import { NOT_TRACKED, approveForNewConversation, demoTracks } from './tracking';
 
 /** Set by simulate.ts, so the "life" of the demo can react without this file knowing about it. */
 export const hooks: {
@@ -288,6 +289,7 @@ export function sendAgentMessage(user: Viewer, conversationId: string, input: Se
     throw badRequest('This inbox does not support text replies. Use a private note, or reply on another channel.');
   }
   if (kind === 'MESSAGE' && !inbox.enabled) throw badRequest('This inbox is disabled');
+  if (kind === 'MESSAGE' && !demoTracks(inbox, conv.externalThreadId)) throw badRequest(NOT_TRACKED);
 
   const mentions = [...new Set(input.mentions ?? [])];
   const isWidget = inbox.channelType === 'WEBSITE';
@@ -475,6 +477,7 @@ export function startConversation(user: Viewer, input: { inboxId: string; contac
       throw badRequest('Start a conversation on WhatsApp, Email, Telegram or Meta inboxes');
   }
 
+  if (approveForNewConversation(user, inbox, threadId)) audit(user.id, 'inbox.whatsapp_tracking', { type: 'inbox', id: inbox.id }, { approved: 1, via: 'new conversation' });
   let conv = s.conversations.find((c) => c.inboxId === inbox.id && c.externalThreadId === threadId);
   if (!conv) {
     const now = nowIso();

@@ -2,16 +2,19 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BookText, Inbox, ScrollText, ShieldCheck, SlidersHorizontal, Tag, User, UserCog, Users } from 'lucide-react';
+import { BookText, Inbox, ListFilter, ScrollText, ShieldCheck, SlidersHorizontal, Tag, User, UserCog, Users } from 'lucide-react';
 import { useApp } from '@/hooks/use-bootstrap';
 import { cn } from '@/lib/utils';
+import { useShowWhatsAppTracking } from '@/components/settings/whatsapp-tracking';
 
 export default function SettingsLayout({ children }: { children: ReactNode }) {
   const { isAdmin, isManager, features } = useApp();
   const pathname = usePathname();
+  const showWhatsApp = useShowWhatsAppTracking();
   const items = [
     { href: '/settings/profile', label: 'My profile', icon: User, show: true },
     { href: '/settings/inboxes', label: 'Inboxes & channels', icon: Inbox, show: isAdmin },
+    { href: '/settings/whatsapp', label: 'WhatsApp tracking', icon: ListFilter, show: showWhatsApp },
     { href: '/settings/people', label: 'People', icon: UserCog, show: true },
     { href: '/settings/teams', label: 'Teams', icon: Users, show: true },
     { href: '/settings/security', label: 'Sign-in & security', icon: ShieldCheck, show: isAdmin },

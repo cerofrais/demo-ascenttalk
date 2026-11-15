@@ -84,6 +84,11 @@ export function RealtimeBridge() {
     debounceInvalidate('inboxes', ['inboxes'], 500);
   });
   useSocketEvent('inbox.deleted', () => debounceInvalidate('bootstrap', ['bootstrap'], 300));
+  // WhatsApp chats removed after they stopped being tracked (settings/whatsapp)
+  useSocketEvent('conversations.removed', () => {
+    debounceInvalidate('conv', ['conversations']);
+    debounceInvalidate('counts', ['conversation-counts']);
+  });
   useSocketEvent('user.updated', () => debounceInvalidate('users', ['users'], 600));
   useSocketEvent('features.updated', () => {
     qc.invalidateQueries({ queryKey: ['bootstrap'] });

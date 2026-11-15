@@ -26,6 +26,7 @@ import './handlers/people';
 import './handlers/conversations';
 import './handlers/clients';
 import './handlers/chat';
+import './handlers/whatsapp-tracking';
 import './handlers/inboxes';
 import './handlers/oversight';
 import './handlers/reports';

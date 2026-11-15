@@ -5,6 +5,7 @@
  */
 import type { ChannelType, ConversationStatus, Presence, Priority, Role } from '@/lib/api';
 import { DATA_VERSION, generateState } from './data';
+import type { DTracking } from './tracking';
 
 export const STATE_KEY = 'ascentalk-demo-state-v1';
 export const STATE_VERSION = DATA_VERSION;
@@ -338,6 +339,8 @@ export interface DemoState {
   manualPresence: Record<string, Presence>;
   /** Website widget: widget token → the visitor contact of this browser. */
   widgetSessions: Record<string, string>;
+  /** WhatsApp tracking rules per inbox, created on first use (tracking.ts). */
+  whatsappTracking?: Record<string, DTracking>;
 }
 
 // ─── Loading and saving ──────────────────────────────────────────────────────
