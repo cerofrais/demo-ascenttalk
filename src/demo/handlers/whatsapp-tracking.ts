@@ -4,8 +4,9 @@
  * something real to choose from.
  */
 import type { OutsideConversation, TrackingChatRow, TrackingGroupRow, TrackingSummary } from '@/components/settings/whatsapp-tracking';
+import type { ChatRemoval, WhatsAppChatInfo } from '@/components/inbox/whatsapp-chat-actions';
 import type { Viewer } from '../access';
-import { ADMIN_ROLES, isAdmin } from '../access';
+import { ADMIN_ROLES, canSeeConversation, isAdmin } from '../access';
 import { audit } from '../core';
 import { badRequest, forbidden, notFound, notInDemo, route } from '../http';
 import { emit, rooms } from '../realtime';
@@ -136,7 +137,14 @@ route('POST', '/inboxes/:id/whatsapp/tracking/outside/remove', ({ me, params, bo
   const inbox = load(me, params.id, true);
   const s = db();
   const wanted = new Set<string>(Array.isArray(body.ids) ? body.ids : []);
-  const targets = new Set(outside(s, inbox).filter((c) => wanted.has(c.id)).map((c) => c.id));
+  const res = deleteConversations(s, inbox, outside(s, inbox).filter((c) => wanted.has(c.id)).map((c) => c.id));
+  audit(me.id, 'inbox.whatsapp_untracked_removed', { type: 'inbox', id: inbox.id }, res);
+  return res;
+});
+
+/** Mirrors deleteConversations in the API: the conversations, their messages and files, and orphaned contacts. */
+function deleteConversations(s: DemoState, inbox: DInbox, ids: string[]): ChatRemoval {
+  const targets = new Set(s.conversations.filter((c) => c.inboxId === inbox.id && ids.includes(c.id)).map((c) => c.id));
   if (!targets.size) return { conversations: 0, messages: 0, files: 0, contacts: 0 };
   const removedMessages = s.messages.filter((m) => targets.has(m.conversationId));
   const messageIds = new Set(removedMessages.map((m) => m.id));
@@ -156,8 +164,58 @@ route('POST', '/inboxes/:id/whatsapp/tracking/outside/remove', ({ me, params, bo
   s.contacts = s.contacts.filter((c) => !gone.includes(c.id));
   touch();
   emit(rooms.everyone, 'conversations.removed', { inboxId: inbox.id, ids: [...targets] });
-  const res = { conversations: targets.size, messages: removedMessages.length, files, contacts: gone.length };
-  audit(me.id, 'inbox.whatsapp_untracked_removed', { type: 'inbox', id: inbox.id }, res);
+  return { conversations: targets.size, messages: removedMessages.length, files, contacts: gone.length };
+}
+
+// ─── One chat, from the conversation screen (routes/whatsapp-sync.ts) ───────
+
+function chatConversation(me: Viewer, id: string) {
+  const s = db();
+  const conv = s.conversations.find((c) => c.id === id);
+  const inbox = conv && s.inboxes.find((i) => i.id === conv.inboxId);
+  if (!conv || !inbox || !canSeeConversation(me, conv, s)) throw notFound('Conversation');
+  if (inbox.channelType !== 'WHATSAPP') throw notFound('WhatsApp conversation');
+  return { s, conv, inbox };
+}
+
+function assertCanManageChat(me: Viewer, inbox: DInbox) {
+  if (canManage(me, inbox)) return;
+  const owner = db().users.find((u) => u.id === ownerId(inbox));
+  throw forbidden(owner ? `This is ${owner.name}'s number, so only they can delete or ignore its chats.` : `Only an admin can delete or ignore chats on ${inbox.name}.`);
+}
+
+route('GET', '/conversations/:id/whatsapp', ({ me, params }): WhatsAppChatInfo => {
+  const { s, conv, inbox } = chatConversation(me, params.id);
+  const owner = s.users.find((u) => u.id === ownerId(inbox));
+  return {
+    canManage: canManage(me, inbox),
+    owner: owner ? { id: owner.id, name: owner.name } : null,
+    isGroup: conv.isGroup,
+    messages: s.messages.filter((m) => m.conversationId === conv.id).length,
+    tracked: Boolean(conv.externalThreadId) && (demoTracks(inbox, conv.externalThreadId, s) || Boolean(conv.clientId && decide(trackingFor(inbox, s), normalize(conv.externalThreadId) ?? '') === 'clients')),
+  };
+});
+
+route('POST', '/conversations/:id/whatsapp/delete', ({ me, params }) => {
+  const { s, conv, inbox } = chatConversation(me, params.id);
+  assertCanManageChat(me, inbox);
+  const res = deleteConversations(s, inbox, [conv.id]);
+  audit(me.id, 'conversation.deleted', { type: 'conversation', id: conv.id }, { displayId: conv.displayId, channel: 'WHATSAPP', group: conv.isGroup, ...res });
+  return res;
+});
+
+route('POST', '/conversations/:id/whatsapp/ignore', ({ me, params }) => {
+  const { s, conv, inbox } = chatConversation(me, params.id);
+  assertCanManageChat(me, inbox);
+  const jid = normalize(conv.externalThreadId);
+  if (!jid) throw badRequest('This conversation has no WhatsApp chat id to ignore.');
+  const t = trackingFor(inbox, s);
+  t.block = [...new Set([...t.block, jid])];
+  t.allow = t.allow.filter((j) => j !== jid);
+  delete t.skipped[jid];
+  const same = s.conversations.filter((c) => c.inboxId === inbox.id && normalize(c.externalThreadId) === jid).map((c) => c.id);
+  const res = deleteConversations(s, inbox, [...new Set([conv.id, ...same])]);
+  audit(me.id, 'inbox.whatsapp_ignored', { type: 'inbox', id: inbox.id }, { displayId: conv.displayId, group: conv.isGroup, ...res });
   return res;
 });
 

@@ -20,6 +20,7 @@ import { Composer, type ComposerPayload } from '@/components/messages/composer';
 import { useDialer } from '@/components/shell/softphone';
 import { MessageBubble } from './message-bubble';
 import { ConversationDetails } from './conversation-details';
+import { ChatActionDialog, WhatsAppChatMenuItems, useWhatsAppChatInfo, type ChatAction } from './whatsapp-chat-actions';
 
 type MsgPage = { messages: Message[]; hasMore: boolean };
 export type ConversationFull = Conversation & { participants: { id: string; name: string }[] };
@@ -62,6 +63,9 @@ export function ConversationView({ id }: { id: string }) {
     retry: (n, e) => !(e instanceof ApiError && e.status === 404) && n < 2,
   });
   const conv = convQuery.data?.conversation;
+  const waInfo = useWhatsAppChatInfo(id, conv?.channelType === 'WHATSAPP');
+  const [chatAction, setChatAction] = useState<ChatAction | null>(null);
+  const removing = useRef(false);
 
   const msgKey = useMemo(() => ['messages', id], [id]);
   const msgs = useInfiniteQuery({
@@ -120,6 +124,12 @@ export function ConversationView({ id }: { id: string }) {
   });
   useSocketEvent<Conversation>('conversation.updated', (c) => {
     if (c.id === id) qc.setQueryData(['conversation', id], (d: any) => (d ? { ...d, conversation: { ...d.conversation, ...c, unread: 0 } } : d));
+  });
+  // deleted by someone else (or by clean-up on the tracking screen) while open here
+  useSocketEvent<{ ids?: string[] }>('conversations.removed', (p) => {
+    if (removing.current || !p.ids?.includes(id)) return;
+    toast.info('This conversation was deleted from AscenTalk');
+    router.replace('/inbox');
   });
   useSocketEvent<any>('typing', (p) => {
     if (p.scope === 'conversation' && p.id === id && p.userId !== me.id) setTyping({ name: p.contact ? 'Visitor' : `${p.name}${p.isPrivate ? ' (note)' : ''}`, at: Date.now() });
@@ -304,6 +314,7 @@ export function ConversationView({ id }: { id: string }) {
               <MenuItem onSelect={() => patch({ assigneeId: me.id })} icon={<UserPlus className="h-3.5 w-3.5" />}>
                 Assign to me
               </MenuItem>
+              {channelType === 'WHATSAPP' && <WhatsAppChatMenuItems info={waInfo.data} onChoose={setChatAction} />}
             </MenuContent>
           </Menu>
         </header>
@@ -431,6 +442,17 @@ export function ConversationView({ id }: { id: string }) {
       </Drawer>
 
       <ShareDialog message={share} conversationId={id} onClose={() => setShare(null)} />
+      {channelType === 'WHATSAPP' && (
+        <ChatActionDialog
+          action={chatAction}
+          conversationId={id}
+          title={title}
+          info={waInfo.data}
+          onClose={() => setChatAction(null)}
+          onStart={() => (removing.current = true)}
+          onDone={() => router.replace('/inbox')}
+        />
+      )}
     </div>
   );
 }
