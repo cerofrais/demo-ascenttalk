@@ -40,21 +40,26 @@ export function AscentMark({ className }: { className?: string }) {
   );
 }
 
-export const ASCENT_URL = 'https://ascent-i-tech.com';
+export const ASCENT_NAME = 'Ascent Intelligent Technologies';
+export const ASCENT_URL = 'https://ascent-i-tech.in';
+export const ASCENT_CONTACT_URL = `${ASCENT_URL}/#contact`;
 
-/** The "Built by Ascent" credit shown in footers. */
+/** The footer credit: "Built by Ascent Intelligent Technologies · Contact us". */
 export function BuiltByAscent({ className, onDark }: { className?: string; onDark?: boolean }) {
+  const link = cn('transition-colors hover:underline', onDark ? 'hover:text-white' : 'hover:text-fg');
   return (
-    <a
-      href={ASCENT_URL}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={cn('inline-flex items-center gap-1.5 text-[11px] transition-colors', onDark ? 'text-sidebar-fg hover:text-white' : 'text-fg-3 hover:text-fg', className)}
-    >
-      <AscentMark className={cn('h-3.5 w-[19px]', onDark ? 'text-sidebar-fg' : 'text-brand-grey')} />
+    <span className={cn('inline-flex flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5 text-[11px]', onDark ? 'text-sidebar-fg' : 'text-fg-3', className)}>
+      <AscentMark className={cn('h-3.5 w-[19px] shrink-0', onDark ? 'text-sidebar-fg' : 'text-brand-grey')} />
       <span>
-        Built by <span className="font-semibold">Ascent</span>
+        Built by{' '}
+        <a href={ASCENT_URL} target="_blank" rel="noopener noreferrer" className={cn('font-semibold', link)}>
+          {ASCENT_NAME}
+        </a>
       </span>
-    </a>
+      <span aria-hidden>·</span>
+      <a href={ASCENT_CONTACT_URL} target="_blank" rel="noopener noreferrer" className={link}>
+        Contact us
+      </a>
+    </span>
   );
 }

@@ -32,4 +32,4 @@ Then open http://localhost:3000.
 This repository is generated. The source lives in the main AscenTalk repository and is exported with
 `scripts/export-demo.sh`, so changes made here directly will be overwritten by the next export.
 
-Built by [Ascent](https://ascent-i-tech.com).
+Built by [Ascent Intelligent Technologies](https://ascent-i-tech.in). [Contact us](https://ascent-i-tech.in/#contact).

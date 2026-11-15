@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 import { getLastDemoPersonaId, setDemoPersonaId } from '@/lib/demo';
 import { disconnectSocket } from '@/lib/socket';
 import { DEMO_AGENCY, PERSONAS, type DemoPersona } from '@/demo/personas';
-import { ASCENT_URL, BuiltByAscent, LogoMark } from '@/components/ui/logo';
+import { ASCENT_CONTACT_URL, ASCENT_NAME, ASCENT_URL, BuiltByAscent, LogoMark } from '@/components/ui/logo';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 const ICON: Record<DemoPersona['icon'], typeof Crown> = { crown: Crown, settings: Settings, eye: Eye, briefcase: Briefcase, palette: Palette, video: Video };
@@ -114,12 +114,18 @@ export function DemoPicker() {
         </div>
       </main>
       <footer className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 px-4 pb-5 text-[11px] text-fg-3">
-        <span>© {new Date().getFullYear()} Ascent. All rights reserved.</span>
+        <span>
+          © {new Date().getFullYear()} {ASCENT_NAME}. All rights reserved.
+        </span>
         <span aria-hidden>·</span>
         <span>
           A product of{' '}
           <a href={ASCENT_URL} target="_blank" rel="noopener noreferrer" className="font-medium text-fg-2 hover:text-fg hover:underline">
-            Ascent
+            {ASCENT_NAME}
+          </a>
+          {' — '}
+          <a href={ASCENT_CONTACT_URL} target="_blank" rel="noopener noreferrer" className="font-medium text-fg-2 hover:text-fg hover:underline">
+            contact us
           </a>
         </span>
       </footer>
