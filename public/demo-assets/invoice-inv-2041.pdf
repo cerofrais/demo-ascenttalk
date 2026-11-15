@@ -1,0 +1,49 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 1002 >>
+stream
+BT /F2 20 Tf 56 770 Td (Invoice INV-2041) Tj ET
+0.31 0.27 0.9 RG 2 w 56 756 m 539 756 l S
+BT /F1 11 Tf 56 726 Td (From: Orbit Media, 14 Lakeview Road, Example City) Tj ET
+BT /F1 11 Tf 56 709 Td (To: Harvest Lane Foods, Accounts Payable) Tj ET
+BT /F2 13 Tf 56 682 Td (October retainer) Tj ET
+BT /F1 11 Tf 56 660 Td (Strategy and account management          1 month) Tj ET
+BT /F1 11 Tf 56 643 Td (Creative production \(12 statics, 4 reels\)) Tj ET
+BT /F1 11 Tf 56 626 Td (Performance media management) Tj ET
+BT /F2 13 Tf 56 599 Td (Summary) Tj ET
+BT /F1 11 Tf 56 577 Td (Subtotal        as per the signed retainer agreement) Tj ET
+BT /F1 11 Tf 56 560 Td (Taxes           as applicable) Tj ET
+BT /F1 11 Tf 56 543 Td (Due             within 15 days of the invoice date) Tj ET
+BT /F1 11 Tf 56 516 Td (Bank details are on the signed agreement. Questions: accounts@orbitmedia.example) Tj ET
+BT /F1 8 Tf 56 40 Td (Sample document for the AscenTalk demo. All companies, people and figures are fictional.) Tj ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+6 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
+endobj
+xref
+0 7
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000251 00000 n 
+0000001304 00000 n 
+0000001374 00000 n 
+trailer
+<< /Size 7 /Root 1 0 R >>
+startxref
+1449
+%%EOF
