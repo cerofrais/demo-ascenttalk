@@ -22,6 +22,20 @@ interface VoiceConfig {
   endpoint: { username: string; password: string } | null;
   lines: { id: string; name: string; phoneNumber: string | null; status: string }[];
   error: string | null;
+  /** An https:// address of this installation, for browser calls when the current one is plain http. */
+  secureUrl?: string | null;
+}
+
+export function useVoiceConfig() {
+  const { features } = useApp();
+  return useQuery({ queryKey: ['voice-config'], queryFn: () => api.get<VoiceConfig>('/voice/config'), enabled: features.voice.enabled, staleTime: 5 * 60_000 });
+}
+
+/** Browsers only give the microphone to https:// pages and localhost. */
+export function insecureCallHint(secureUrl: string | null | undefined): string {
+  return secureUrl
+    ? `Your browser only allows calls on a secure address. Open AscenTalk at ${secureUrl}, or choose "On my mobile" under My profile.`
+    : 'Your browser only allows calls on a secure (https) address, and this one is plain http. Choose "On my mobile" under My profile, or ask an admin for an https address.';
 }
 
 type CallState = 'connecting' | 'ringing' | 'in-progress' | 'incoming' | 'bridging';
@@ -49,7 +63,7 @@ interface DialOptions {
 
 interface DialerCtx {
   available: boolean;
-  status: 'off' | 'connecting' | 'ready' | 'error' | 'mobile';
+  status: 'off' | 'connecting' | 'ready' | 'error' | 'mobile' | 'insecure';
   call: (to: string, opts?: DialOptions) => Promise<void>;
   openKeypad: () => void;
   active: ActiveCall | null;
@@ -61,7 +75,7 @@ export const useDialer = () => useContext(Ctx);
 export function DialerProvider({ children }: { children: ReactNode }) {
   const { features } = useApp();
   const enabled = features.voice.enabled;
-  const { data: cfg } = useQuery({ queryKey: ['voice-config'], queryFn: () => api.get<VoiceConfig>('/voice/config'), enabled, staleTime: 5 * 60_000 });
+  const { data: cfg } = useVoiceConfig();
   const plivoRef = useRef<any>(null);
   const [status, setStatus] = useState<DialerCtx['status']>('off');
   const [active, setActive] = useState<ActiveCall | null>(null);
@@ -73,6 +87,8 @@ export function DialerProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!cfg?.enabled || !cfg.configured || !cfg.lines.length) return setStatus('off');
     if (cfg.callMode === 'MOBILE') return setStatus('mobile');
+    // no microphone on a plain-http page, so the browser could neither ring nor talk
+    if (!window.isSecureContext) return setStatus('insecure');
     if (!cfg.endpoint) return setStatus(cfg.error ? 'error' : 'off');
     let cancelled = false;
     setStatus('connecting');
@@ -157,6 +173,7 @@ export function DialerProvider({ children }: { children: ReactNode }) {
       if (!cfg?.configured) return void toast.error('Calling is not configured. Ask an admin to add Plivo credentials.');
       if (!cfg.lines.length) return void toast.error('No phone line yet. Add a Plivo number under Settings → Inboxes.');
       if (activeRef.current) return void toast.error('You are already on a call');
+      if (cfg.callMode !== 'MOBILE' && status === 'insecure') return void toast.error(insecureCallHint(cfg.secureUrl), { duration: 10_000 });
       try {
         const res = await api.post<{ callId: string; mode: 'SOFTPHONE' | 'MOBILE'; to: string; conversationId: string }>('/voice/calls', {
           to,
@@ -314,7 +331,7 @@ function KeypadDialog({ open, onOpenChange, cfg, status, onCall }: { open: boole
     if (cfg?.lines[0] && !line) setLine(cfg.lines[0].id);
   }, [cfg, line]);
   const statusText =
-    status === 'ready' ? 'Softphone connected' : status === 'connecting' ? 'Connecting softphone…' : status === 'mobile' ? `Calls ring your mobile ${cfg?.phone ?? ''}` : status === 'error' ? 'Softphone could not connect' : 'Calling unavailable';
+    status === 'ready' ? 'Softphone connected' : status === 'connecting' ? 'Connecting softphone…' : status === 'mobile' ? `Calls ring your mobile ${cfg?.phone ?? ''}` : status === 'error' ? 'Softphone could not connect' : status === 'insecure' ? insecureCallHint(cfg?.secureUrl) : 'Calling unavailable';
   return (
     <Dialog open={open} onOpenChange={onOpenChange} title="Make a call" description={statusText} size="sm">
       {!cfg?.configured ? (

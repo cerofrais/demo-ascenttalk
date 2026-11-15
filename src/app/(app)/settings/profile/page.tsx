@@ -1,8 +1,9 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { Monitor, Smartphone, Upload } from 'lucide-react';
+import { Lock, Monitor, Smartphone, Upload } from 'lucide-react';
 import { api } from '@/lib/api';
+import { useVoiceConfig } from '@/components/shell/softphone';
 import { useAuthConfig } from '@/components/settings/identity';
 import { ROLE_LABEL, cn } from '@/lib/utils';
 import { useApp } from '@/hooks/use-bootstrap';
@@ -22,6 +23,10 @@ export default function ProfilePage() {
   const fileRef = useRef<HTMLInputElement>(null);
   useEffect(() => setF({ name: me.name, title: me.title ?? '', department: me.department ?? '', phone: me.phone ?? '', skills: me.skills.join(', '), statusText: me.statusText ?? '' }), [me]);
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF((s) => ({ ...s, [k]: e.target.value }));
+  const { data: voice } = useVoiceConfig();
+  // read after mount: the server render has no window
+  const [here, setHere] = useState({ secure: true, origin: '' });
+  useEffect(() => setHere({ secure: window.isSecureContext, origin: window.location.origin }), []);
 
   const save = async () => {
     setSaving(true);
@@ -36,7 +41,7 @@ export default function ProfilePage() {
     }
   };
   const setCallMode = async (callMode: 'SOFTPHONE' | 'MOBILE') => {
-    if (callMode === 'MOBILE' && !f.phone.trim()) return void toast.error('Add and save your mobile number first');
+    if (callMode === 'MOBILE' && !f.phone.trim()) return void toast.error('Add your mobile number above first');
     try {
       await api.patch(`/users/${me.id}`, { callMode, phone: f.phone || null });
       refetch();
@@ -115,10 +120,25 @@ export default function ProfilePage() {
 
         {features.channels.VOICE && (
           <Card title="How I take calls">
+            <p className="mb-3 text-sm text-fg-2">Calls to the agency number ring you this way, and calls you start from AscenTalk use it too.</p>
             <div className="grid gap-3 sm:grid-cols-2">
               {[
-                { mode: 'SOFTPHONE' as const, icon: Monitor, title: 'In the browser', text: 'Make and answer calls here with your headset. Needs AscenTalk open.', on: features.voice.softphone },
-                { mode: 'MOBILE' as const, icon: Smartphone, title: 'On my mobile', text: 'We ring your phone and connect the client. They see the agency number.', on: features.voice.mobileBridge },
+                {
+                  mode: 'SOFTPHONE' as const,
+                  icon: Monitor,
+                  title: 'In the browser',
+                  text: 'Make and answer calls here with your headset. Needs AscenTalk open.',
+                  note: here.secure ? null : 'Not on this address: it is not https.',
+                  on: features.voice.softphone,
+                },
+                {
+                  mode: 'MOBILE' as const,
+                  icon: Smartphone,
+                  title: 'On my mobile',
+                  text: 'We ring your phone and connect the client. They see the agency number.',
+                  note: f.phone.trim() ? `Rings ${f.phone.trim()}` : 'Add your mobile number above first.',
+                  on: features.voice.mobileBridge,
+                },
               ]
                 .filter((o) => o.on)
                 .map((o) => (
@@ -128,12 +148,30 @@ export default function ProfilePage() {
                     className={cn('rounded-xl border p-4 text-left transition-colors', me.callMode === o.mode ? 'border-primary bg-primary-soft' : 'border-border hover:bg-surface-2')}
                     aria-pressed={me.callMode === o.mode}
                   >
-                    <o.icon className={cn('h-5 w-5', me.callMode === o.mode ? 'text-primary' : 'text-fg-3')} />
+                    <span className="flex items-center justify-between gap-2">
+                      <o.icon className={cn('h-5 w-5', me.callMode === o.mode ? 'text-primary' : 'text-fg-3')} />
+                      {me.callMode === o.mode && <span className="text-xs font-medium text-primary">Selected</span>}
+                    </span>
                     <p className="mt-2 text-sm font-semibold">{o.title}</p>
                     <p className="mt-0.5 text-xs text-fg-3">{o.text}</p>
+                    {o.note && <p className="mt-1.5 text-xs font-medium text-fg-2">{o.note}</p>}
                   </button>
                 ))}
             </div>
+            {me.callMode === 'SOFTPHONE' && features.voice.softphone && !here.secure && (
+              <div className="mt-3 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2.5 text-sm text-fg-2">
+                <p>
+                  Your browser blocks the microphone on {here.origin} because it is not an https address, so calls cannot ring or be made here.
+                </p>
+                {voice?.secureUrl ? (
+                  <a href={`${voice.secureUrl}/settings/profile`} className="mt-2 inline-flex items-center gap-1.5 font-medium text-primary hover:underline">
+                    <Lock className="h-3.5 w-3.5" /> Open AscenTalk at {voice.secureUrl.replace(/^https:\/\//, '')}
+                  </a>
+                ) : (
+                  <p className="mt-1">Choose On my mobile, or ask an admin to set up an https address.</p>
+                )}
+              </div>
+            )}
           </Card>
         )}
 
